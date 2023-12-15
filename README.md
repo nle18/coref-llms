@@ -18,8 +18,6 @@ export OPENAI_API_KEY=/your/openai/api_key
 We follow this repo to pre-process the raw coref data into jsonlines files: https://github.com/shtoshni/fast-coref
 
 ## Run Code 
-[Instructions]
-
 ```
 python src/main.py \
 	--exp_dir [experiment directory] \
@@ -28,7 +26,7 @@ python src/main.py \
 	--prompt_template [either `doc_template` or `qa_template`] \
 ```
 
-As an example, you can generate the coreference annotation as follows 
+As an example (taken from WikiCoref dataset), you can generate the coreference annotation as follows 
 ```
 python src/main.py \
 	--exp_dir ./test \
