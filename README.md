@@ -1,5 +1,7 @@
 # Are Large Language Models Robust Coreference Resolvers? 
 
+![image](approach.pdf)
+
 ## Setup 
 1. Create conda environment
 ```
