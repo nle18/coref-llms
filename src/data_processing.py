@@ -15,15 +15,15 @@ from utils.io_utils import *
 def get_dataset_readers(args):
 
     DATASET_READERS = {
-        "doc_example": DocExampleDatasetReader,
-        "mention_example": MentionExampleDatasetReader,
+        "doc_template": DocExampleDatasetReader,
+        "qa_template": MentionExampleDatasetReader,
         "iterative_decoding_example": DocExampleIterativeDecodingDatasetReader,
     }
     gold_data = read_jsonl(args.eval_data)
     # TODO refactor with predicted mentions
     predicted_data = read_jsonl(args.eval_data)
     tokenizer = AutoTokenizer.from_pretrained("gpt2", add_prefix_space=True)
-    dataset_reader = DATASET_READERS[args.example_type](
+    dataset_reader = DATASET_READERS[args.prompt_template](
         gold_data, predicted_data, tokenizer
     )
 
@@ -704,7 +704,7 @@ class DocExampleDatasetReader:
         text = text.strip()
 
         # first get the "start_token" and "end_token"
-        start_token = ("\(#",)  # "\(#" to avoid matching hashtags in the text itself
+        start_token = "\(#"  # "\(#" to avoid matching hashtags in the text itself
         end_token = ")"
 
         # then find positions
@@ -817,49 +817,49 @@ class DocExampleDatasetReader:
         doc_data = []
         for example in self.split_data:
 
-            try:
-                doc_key = example["doc_key"]
-                generated_text = "{0}{1}".format(
-                    example["output_priming"],
-                    generations[doc_key]["generated_text"],
-                ).strip()
-                # generated_text = generations[doc_key]["generated_text"].strip()
-                input_text = example["input_context_str"].strip()
-                generated_positions = self._get_positions(generated_text)
-                input_positions = self._get_positions(input_text)
-                assert len(input_positions) == len(example["predicted_mentions"])
-                predicted_clusters = None
-                # aligned: case where LM produces all mentions
+            # try:
+            doc_key = example["doc_key"]
+            generated_text = "{0}{1}".format(
+                example["output_priming"],
+                generations[doc_key]["generated_text"],
+            ).strip()
+            # generated_text = generations[doc_key]["generated_text"].strip()
+            input_text = example["input_context_str"].strip()
+            generated_positions = self._get_positions(generated_text)
+            input_positions = self._get_positions(input_text)
+            assert len(input_positions) == len(example["predicted_mentions"])
+            predicted_clusters = None
+            # aligned: case where LM produces all mentions
 
-                if (
-                    len(generated_positions)
-                    == len(input_positions)
-                    == len(example["predicted_mentions"])
-                ):
-                    predicted_clusters_dict = defaultdict(list)
-                    for i, m in enumerate(example["predicted_mentions"]):
+            if (
+                len(generated_positions)
+                == len(input_positions)
+                == len(example["predicted_mentions"])
+            ):
+                predicted_clusters_dict = defaultdict(list)
+                for i, m in enumerate(example["predicted_mentions"]):
 
-                        e_start, e_end = generated_positions[i]
-                        predicted_clusterID = generated_text[e_start:e_end]
-                        predicted_clusters_dict[predicted_clusterID].append(m)
+                    e_start, e_end = generated_positions[i]
+                    predicted_clusterID = generated_text[e_start:e_end]
+                    predicted_clusters_dict[predicted_clusterID].append(m)
 
-                    predicted_clusters = [c for _, c in predicted_clusters_dict.items()]
-                # misaligned: cases where LM does not produce all mentions
-                else:
-                    predicted_clusters = self._extract_clusters_from_unaligned_texts(
-                        generated_text, input_text, example
-                    )
-                if predicted_clusters is not None:
-                    doc_data.append(
-                        {
-                            "doc_key": doc_key,
-                            "predicted_clusters": predicted_clusters,
-                            "gold_clusters": example["gold_clusters"],
-                        }
-                    )
-            except:
-                print("Something wrong with doc_key={0}".format(doc_key))
-                continue
+                predicted_clusters = [c for _, c in predicted_clusters_dict.items()]
+            # misaligned: cases where LM does not produce all mentions
+            else:
+                predicted_clusters = self._extract_clusters_from_unaligned_texts(
+                    generated_text, input_text, example
+                )
+            if predicted_clusters is not None:
+                doc_data.append(
+                    {
+                        "doc_key": doc_key,
+                        "predicted_clusters": predicted_clusters,
+                        "gold_clusters": example["gold_clusters"],
+                    }
+                )
+        # except:
+        #     print("Something wrong with doc_key={0}".format(doc_key))
+        #     continue
         print(
             "Process {0} out of {1} docs ({2:0.2f}%)".format(
                 len(doc_data),
